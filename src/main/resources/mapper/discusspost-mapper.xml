@@ -6,23 +6,77 @@
     <sql id="selectFields">
         id,user_id,title,content,type,status,create_time,comment_count,score
     </sql>
+    <sql id="insertFields">
+        user_id,title,content,type,status,create_time,comment_count,score
+    </sql>
     <select id="selectDiscussPosts" resultType="DiscussPost">
-        select <include refid="selectFields"></include>
-        from discuss_post
-        where status !=2
+        select *
+        from discuss_post t1
+        right join(
+        select id from discuss_post
         <if test="userId!=0">
-            and user_id = #{userId}
+            where user_id = #{userId}
+            and status !=2
         </if>
-        order by type desc,create_time desc
+        <if test="userId==0">
+            where status!=2
+        </if>
+        <if test="orderMode==0">
+            order by type desc,create_time desc
+        </if>
+        <if test="orderMode==1">
+            order by type desc,score desc,create_time desc
+        </if>
         limit #{offset},#{limit}
+        ) t2
+        on t1.id=t2.id;
     </select>
 
     <select id="selectDiscussPostRows" resultType="int">
-        select count(id)
+        select count(status)
         from discuss_post
-        where status !=2
+        <if test="userId==0">
+            where status !=2
+        </if>
         <if test="userId!=0">
-            and user_id = #{userId}
+            where user_id = #{userId}
+            and status !=2
         </if>
     </select>
+
+    <select id="selectDiscussPostById" resultType="DiscussPost">
+        select <include refid="selectFields"></include>
+        from discuss_post
+        where id = #{id}
+    </select>
+
+    <update id="updateCommentCount">
+        update discuss_post set comment_count = #{commentCount} where id = #{id}
+    </update>
+
+    <update id="updateType">
+        update discuss_post set type=#{type} where id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        update discuss_post set status=#{status} where id = #{id}
+    </update>
+    
+    <update id="updateScore">
+        update discuss_post set score=#{score} where id=#{id}
+    </update>
+
+    <insert id="insertDiscussPost" parameterType="DiscussPost" keyProperty="id">
+        insert into discuss_post(<include refid="insertFields"></include>)
+        values(#{userId},#{title},#{content},#{type},#{status},#{createTime},#{commentCount},#{score})
+    </insert>
+
+    <insert id="saveSheet" parameterType="java.util.List">
+        insert into discuss_post
+        (user_id,title,content,create_time,score)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.userId},#{item.title},#{item.content},#{item.createTime},#{item.score})
+        </foreach>
+    </insert>
 </mapper>
